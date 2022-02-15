@@ -19,10 +19,13 @@ import {APIError} from '../../../lib/errors/APIError';
 import {UploadBatchCallback} from '@coveo/push-api-client';
 import globalConfig from '../../../lib/config/globalConfig';
 import {Interfaces} from '@oclif/core';
+import {Config} from '../../../lib/config/config';
 const mockedGlobalConfig = jest.mocked(globalConfig);
 const mockedClient = jest.mocked(AuthenticatedClient);
 const mockedSource = jest.mocked(Source);
 const mockedDocumentBuilder = jest.mocked(DocumentBuilder);
+const mockedConfig = jest.mocked(Config);
+const mockedConfigGet = jest.fn();
 const mockedMarshal = jest.fn();
 
 describe('source:push:add', () => {
@@ -36,6 +39,15 @@ describe('source:push:add', () => {
   const mockSetSourceStatus = jest.fn();
   const mockBatchUpdate = jest.fn();
 
+  const mockConfig = () => {
+    mockedConfigGet.mockReturnValue({
+      region: 'au',
+      organization: 'foo',
+      environment: 'prod',
+    });
+
+    mockedConfig.prototype.get = mockedConfigGet;
+  };
   const doMockSuccessBatchUpload = () => {
     mockBatchUpdate.mockImplementation(
       (_sourceId: string, fileNames: string[], callback: UploadBatchCallback) =>
@@ -110,6 +122,7 @@ describe('source:push:add', () => {
 
   describe('when the batch upload is successfull', () => {
     beforeAll(() => {
+      mockConfig();
       doMockSuccessBatchUpload();
     });
 
@@ -141,7 +154,10 @@ describe('source:push:add', () => {
         join(pathToStub, 'jsondocuments', 'batman.json'),
       ])
       .it('pass correct configuration information to push-api-client', () => {
-        expect(mockedSource).toHaveBeenCalledWith('the_token', 'the_org');
+        expect(mockedSource).toHaveBeenCalledWith('the_token', 'the_org', {
+          environment: 'prod',
+          region: 'au',
+        });
       });
 
     test
@@ -204,6 +220,7 @@ describe('source:push:add', () => {
 
   describe('when the batch upload fails', () => {
     beforeAll(() => {
+      mockConfig();
       doMockErrorBatchUpload();
     });
 
